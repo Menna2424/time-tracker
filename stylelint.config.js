@@ -1,6 +1,6 @@
 module.exports = {
-  plugins: {
-    '@tailwindcss/postcss': {},
-    autoprefixer: {},
-  },
+  extends: [
+    'stylelint-config-standard',
+    'stylelint-config-tailwindcss',
+  ],
 };
