@@ -13,6 +13,50 @@
   }
 }
 
+/* Modern forced-colors mode support */
+@media (forced-colors: active) {
+  /* High contrast mode styles */
+  .bg-white {
+    background-color: Canvas;
+  }
+  .bg-gray-50 {
+    background-color: Canvas;
+  }
+  .bg-gray-100 {
+    background-color: Canvas;
+  }
+  .bg-gray-200 {
+    background-color: GrayText;
+  }
+  .bg-gray-800 {
+    background-color: CanvasText;
+  }
+  .bg-gray-900 {
+    background-color: CanvasText;
+  }
+  .text-gray-900 {
+    color: CanvasText;
+  }
+  .text-gray-700 {
+    color: CanvasText;
+  }
+  .text-gray-600 {
+    color: GrayText;
+  }
+  .text-gray-300 {
+    color: GrayText;
+  }
+  .text-white {
+    color: CanvasText;
+  }
+  .border-gray-200 {
+    border-color: GrayText;
+  }
+  .border-gray-700 {
+    border-color: GrayText;
+  }
+}
+
 /* Custom component styles */
 @layer components {
   /* Add any custom component styles here */

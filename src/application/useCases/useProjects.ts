@@ -1,55 +1,91 @@
-import { useState, useEffect } from 'react';
-import type { Project } from '../../domain/types';
+import { useState, useEffect, useCallback } from 'react';
+import type { ProjectEnhanced, ProjectProgress } from '../../domain/types';
+import { LocalStorageProjectRepository, type IProjectRepository } from '../../infrastructure/storage/ProjectRepository';
 
-// This would typically interact with infrastructure layer
-// For now, we'll use localStorage as a simple implementation
-export const useProjects = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+const defaultProjectRepository = new LocalStorageProjectRepository();
+
+export const useProjects = (repository: IProjectRepository = defaultProjectRepository) => {
+  const [projects, setProjects] = useState<ProjectEnhanced[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadProjects = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const allProjects = await repository.getAll();
+      setProjects(allProjects);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  }, [repository]);
+
+  const createProject = useCallback(async (projectData: Omit<ProjectEnhanced, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const newProject = await repository.create(projectData);
+      setProjects(prev => [...prev, newProject]);
+      return newProject;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create project');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [repository]);
+
+  const updateProject = useCallback(async (id: string, projectData: Partial<ProjectEnhanced>) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const updatedProject = await repository.update(id, projectData);
+      setProjects(prev => prev.map(p => p.id === id ? updatedProject : p));
+      return updatedProject;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update project');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [repository]);
+
+  const deleteProject = useCallback(async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await repository.delete(id);
+      setProjects(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete project');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [repository]);
+
+  const getProjectProgress = useCallback(async (projectId: string): Promise<ProjectProgress> => {
+    try {
+      return await repository.getProgress(projectId);
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Failed to get project progress');
+    }
+  }, [repository]);
 
   useEffect(() => {
-    // Load projects from localStorage
-    const savedProjects = localStorage.getItem('projects');
-    if (savedProjects) {
-      setProjects(JSON.parse(savedProjects));
-    }
-    setLoading(false);
-  }, []);
-
-  const saveProjects = (newProjects: Project[]) => {
-    localStorage.setItem('projects', JSON.stringify(newProjects));
-    setProjects(newProjects);
-  };
-
-  const addProject = (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newProject: Project = {
-      ...project,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    saveProjects([...projects, newProject]);
-  };
-
-  const updateProject = (id: string, updates: Partial<Project>) => {
-    const updatedProjects = projects.map(project =>
-      project.id === id
-        ? { ...project, ...updates, updatedAt: new Date() }
-        : project
-    );
-    saveProjects(updatedProjects);
-  };
-
-  const deleteProject = (id: string) => {
-    const filteredProjects = projects.filter(project => project.id !== id);
-    saveProjects(filteredProjects);
-  };
+    loadProjects();
+  }, [loadProjects]);
 
   return {
     projects,
     loading,
-    addProject,
+    error,
+    createProject,
     updateProject,
     deleteProject,
+    getProjectProgress,
+    refreshProjects: loadProjects,
   };
 }; 

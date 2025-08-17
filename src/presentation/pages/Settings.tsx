@@ -1,8 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useThemeContext } from '../../shared/context/ThemeContext';
+import { useSettings } from '../../application/useCases/useSettings';
 
 export const Settings: React.FC = () => {
   const { isDark, toggleTheme } = useThemeContext();
+  const { settings, updateSettings, loading } = useSettings();
+  const [hourlyRate, setHourlyRate] = useState<number>(50);
+
+  useEffect(() => {
+    if (settings) {
+      setHourlyRate(settings.hourlyRate);
+    }
+  }, [settings]);
+
+  const handleHourlyRateChange = async (newRate: number) => {
+    if (newRate > 0) {
+      await updateSettings({ hourlyRate: newRate });
+      setHourlyRate(newRate);
+    }
+  };
 
   return (
     <div className="p-8">
@@ -112,6 +128,49 @@ export const Settings: React.FC = () => {
                 <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600">
                   <span className="inline-block h-4 w-4 transform translate-x-6 rounded-full bg-white transition-transform" />
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Earnings Settings */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              💰 Earnings Settings
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Hourly Rate (USD)
+                </label>
+                <div className="flex items-center space-x-3">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(parseFloat(e.target.value) || 0)}
+                      onBlur={() => handleHourlyRateChange(hourlyRate)}
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="50.00"
+                      disabled={loading}
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleHourlyRateChange(hourlyRate)}
+                    disabled={loading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    Save
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  Your hourly rate is used to calculate earnings for completed tasks
+                </p>
               </div>
             </div>
           </div>

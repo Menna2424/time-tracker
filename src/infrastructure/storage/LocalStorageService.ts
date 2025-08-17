@@ -58,6 +58,7 @@ export class LocalStorageService {
         theme: { mode: 'light' },
         notifications: true,
         autoStart: false,
+        hourlyRate: 50,
       };
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -65,6 +66,7 @@ export class LocalStorageService {
         theme: { mode: 'light' },
         notifications: true,
         autoStart: false,
+        hourlyRate: 50,
       };
     }
   }

@@ -1,10 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { NAVIGATION_ITEMS } from '../../shared/constants/navigation';
+import { getNavigationItems } from '../../shared/constants/navigation';
 import { useThemeContext } from '../../shared/context/ThemeContext';
+import { useAuthContext } from '../../shared/context/AuthContext';
+import { UserProfile } from './Auth/UserProfile';
 
 export const Sidebar: React.FC = () => {
   const { toggleTheme, isDark } = useThemeContext();
+  const { user } = useAuthContext();
+  const navigationItems = getNavigationItems(user?.role);
 
   return (
     <div className="w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
@@ -18,7 +22,7 @@ export const Sidebar: React.FC = () => {
       {/* Navigation */}
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
-          {NAVIGATION_ITEMS.map((item) => (
+          {navigationItems.map((item) => (
             <li key={item.id}>
               <NavLink
                 to={item.path}
@@ -38,8 +42,12 @@ export const Sidebar: React.FC = () => {
         </ul>
       </nav>
 
-      {/* Theme Toggle */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+      {/* User Profile and Theme Toggle */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+        {/* User Profile */}
+        <UserProfile />
+        
+        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
           className="w-full flex items-center justify-center px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
