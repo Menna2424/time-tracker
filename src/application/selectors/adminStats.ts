@@ -1,6 +1,7 @@
 import type { Task } from '../../domain/entities/Task';
 import type { TeamMember } from '../../domain/entities/TeamMember';
 import type { TimerSession } from '../../domain/entities/TimerSession';
+import { isTaskRunning } from './taskFilters';
 
 export type MemberStats = {
   member: TeamMember;
@@ -34,7 +35,8 @@ export function computeMemberStats(
     const assignees = t.assignedMemberIds ?? [];
     for (const mId of assignees) {
       timePersistedByMember.set(mId, (timePersistedByMember.get(mId) || 0) + (t.timeSpentSec || t.totalTimeSeconds || 0));
-      if (t.status === 'active') {
+      // Count active tasks with the same predicate used by the modal/use case
+      if (isTaskRunning(t)) {
         activeCountByMember.set(mId, (activeCountByMember.get(mId) || 0) + 1);
       }
     }

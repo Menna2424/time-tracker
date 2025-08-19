@@ -8,6 +8,8 @@ import type { TeamMember } from '../../domain/entities/TeamMember';
 import type { Task } from '../../domain/entities/Task';
 import type { TimerSession } from '../../domain/entities/TimerSession';
 import { useAuthContext } from '../../shared/context/AuthContext';
+import { LocalTaskAssignmentRepository } from '../../infrastructure/repositories/LocalTaskAssignmentRepository';
+import { CountMemberActiveTasks } from '../../application/useCases/CountMemberActiveTasks';
 
 export function useAdminTeamStats() {
   const { user } = useAuthContext();
@@ -17,10 +19,13 @@ export function useAdminTeamStats() {
   const [now, setNow] = useState(Date.now()); // tick for live updates
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeCounts, setActiveCounts] = useState<Map<string, number>>(new Map());
 
   const teamRepository = useMemo(() => new MockTeamRepository(), []);
   const taskRepository = useMemo(() => new LocalTasksRepository(), []);
   const timerRepository = useMemo(() => new LocalTimerRepository(), []);
+  const assignmentRepository = useMemo(() => new LocalTaskAssignmentRepository(), []);
+  const countActiveUseCase = useMemo(() => new CountMemberActiveTasks(taskRepository, assignmentRepository), [taskRepository, assignmentRepository]);
 
   const load = useCallback(async () => {
     try {
@@ -72,10 +77,31 @@ export function useAdminTeamStats() {
     };
   }, [load, user?.id]);
 
-  const stats = useMemo(
-    () => computeMemberStats(members, tasks, sessions, now),
-    [members, tasks, sessions, now]
-  );
+  // Recompute active counts using assignment-aware use case to ensure compatibility
+  useEffect(() => {
+    const recomputeActiveCounts = async () => {
+      try {
+        const counts = await Promise.all(
+          members.map(async (m) => ({ id: m.id, count: await countActiveUseCase.execute(m.id) }))
+        );
+        const map = new Map<string, number>();
+        counts.forEach(({ id, count }) => map.set(id, count));
+        setActiveCounts(map);
+      } catch (e) {
+        // keep previous counts on error
+      }
+    };
+    if (members.length > 0) {
+      void recomputeActiveCounts();
+    } else {
+      setActiveCounts(new Map());
+    }
+  }, [members, tasks, sessions, now, countActiveUseCase]);
+
+  const stats = useMemo(() => {
+    const base = computeMemberStats(members, tasks, sessions, now);
+    return base.map(s => ({ ...s, activeTasks: activeCounts.get(s.member.id) ?? s.activeTasks }));
+  }, [members, tasks, sessions, now, activeCounts]);
 
   return { 
     stats, 

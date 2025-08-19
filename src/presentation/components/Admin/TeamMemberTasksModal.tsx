@@ -1,7 +1,8 @@
 import React from 'react';
 import { X, Clock, DollarSign, CheckCircle, AlertCircle, PlayCircle } from 'lucide-react';
-import type { Task } from '../../../domain/types';
+import type { Task } from '../../../domain/entities/Task';
 import { formatCurrency } from '../../../shared/utils/formatters';
+import { isTaskRunning } from '../../../application/selectors/taskFilters';
 
 interface TeamMemberTasksModalProps {
   isOpen: boolean;
@@ -75,10 +76,10 @@ export const TeamMemberTasksModal: React.FC<TeamMemberTasksModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {teamMemberName}'s Tasks
+              {teamMemberName}'s Active Tasks
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mt-1">
-              {tasks.length} total tasks
+              {tasks.length} active tasks
             </p>
           </div>
           <button
@@ -108,10 +109,10 @@ export const TeamMemberTasksModal: React.FC<TeamMemberTasksModalProps> = ({
               <div className="text-center py-12">
                 <AlertCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                 <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
-                  No tasks found
+                  No active tasks
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400">
-                  This team member doesn't have any tasks assigned yet.
+                  This team member doesn't have any active tasks right now.
                 </p>
               </div>
             ) : (
@@ -131,6 +132,11 @@ export const TeamMemberTasksModal: React.FC<TeamMemberTasksModalProps> = ({
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                             {task.status}
                           </span>
+                          {isTaskRunning(task) && (
+                            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              Running
+                            </span>
+                          )}
                         </div>
                         {task.description && (
                           <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
@@ -147,9 +153,9 @@ export const TeamMemberTasksModal: React.FC<TeamMemberTasksModalProps> = ({
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-gray-500" />
                         <div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">Time Spent</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">Elapsed (current)</div>
                           <div className="font-medium text-gray-900 dark:text-white">
-                            {formatTime(task.timeSpent || 0)}
+                            {formatTime((task.currentTimeSeconds || 0) || (task.timeSpentSec || task.totalTimeSeconds || 0))}
                           </div>
                         </div>
                       </div>
@@ -159,7 +165,7 @@ export const TeamMemberTasksModal: React.FC<TeamMemberTasksModalProps> = ({
                         <div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">Earnings</div>
                           <div className="font-medium text-gray-900 dark:text-white">
-                            {task.earnings ? formatCurrency(task.earnings) : 'Calculating...'}
+                            {typeof task.earningsCents === 'number' ? formatCurrency((task.earningsCents || 0) / 100) : 'Calculating...'}
                           </div>
                         </div>
                       </div>
@@ -175,13 +181,7 @@ export const TeamMemberTasksModal: React.FC<TeamMemberTasksModalProps> = ({
                       </div>
                     </div>
 
-                    {task.completedAt && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Completed: {new Date(task.completedAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                    )}
+                    {/* Completed date omitted for compatibility with Task entity */}
                   </div>
                 ))}
               </div>

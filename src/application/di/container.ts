@@ -1,4 +1,7 @@
 import { LocalTasksRepository } from '../../infrastructure/storage/LocalTasksRepository';
+import { LocalTaskAssignmentRepository } from '../../infrastructure/repositories/LocalTaskAssignmentRepository';
+import { ListMemberActiveTasks } from '../useCases/ListMemberActiveTasks';
+import { CountMemberActiveTasks } from '../useCases/CountMemberActiveTasks';
 import { LocalTimerRepository } from '../../infrastructure/repositories/LocalTimerRepository';
 import { LocalWorkingDayRepository } from '../../infrastructure/repositories/LocalWorkingDayRepository';
 import { LocalStorageSettingsRepository } from '../../infrastructure/storage/SettingsRepository';
@@ -29,6 +32,7 @@ const getDefaultHourlyRateCents = async (): Promise<number> => {
 
 const tasksRepo = new LocalTasksRepository();
 const timerRepo = new LocalTimerRepository();
+const assignmentRepo = new LocalTaskAssignmentRepository();
 const workingDayRepo = new LocalWorkingDayRepository();
 
 // Auth repositories
@@ -70,6 +74,7 @@ export const startTimerWithMemberId = async (taskId: string, memberId?: string, 
 export const container = {
   tasksRepo,
   timerRepo,
+  assignmentRepo,
   workingDayRepo,
   authRepo,
   userRepo,
@@ -82,4 +87,6 @@ export const container = {
   workdayTimerService,
   startTimerWithMemberId,
   signUpUseCase,
+  listMemberActiveTasks: new ListMemberActiveTasks(tasksRepo, assignmentRepo),
+  countMemberActiveTasks: new CountMemberActiveTasks(tasksRepo, assignmentRepo),
 };
