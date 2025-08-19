@@ -8,7 +8,7 @@ export class StartTaskTimer {
     private timerRepository: ITimerRepository
   ) {}
 
-  async execute({ taskId, memberId, mode, targetSeconds }: { taskId: string; memberId: string; mode: TimerMode; targetSeconds?: number }): Promise<TimerSession> {
+  async execute({ taskId, memberId, mode, targetSeconds }: { taskId: string; memberId: string; mode?: TimerMode; targetSeconds?: number }): Promise<TimerSession> {
     console.debug('[START_TIMER] starting timer for task:', taskId, 'mode:', mode, 'targetSeconds:', targetSeconds);
     
     // Check if there's already an active session (idempotent)
@@ -26,6 +26,17 @@ export class StartTaskTimer {
 
     // Get projectId from task
     const projectId = task.projectId;
+
+    // Determine timer mode based on task properties
+    let timerMode: TimerMode = mode || 'countup';
+    let sessionTargetSeconds: number | undefined = targetSeconds;
+    
+    // If task has estimated time, set to countdown mode
+    if (task.estimatedMinutes && task.estimatedMinutes > 0) {
+      timerMode = 'countdown';
+      sessionTargetSeconds = task.estimatedMinutes * 60; // Convert minutes to seconds
+      console.debug('[START_TIMER] Task has estimated time, setting countdown mode:', task.estimatedMinutes, 'minutes');
+    }
 
     // Set task.currentStartAt = now; currentTimeSeconds = 0; currentCents = 0
     // Initialize countdown if task has estimated time
@@ -48,8 +59,8 @@ export class StartTaskTimer {
       }),
     };
 
-    // Start session via ITimerRepository
-    const session = await this.timerRepository.startSession(taskId, projectId, memberId, mode, targetSeconds);
+    // Start session via ITimerRepository with proper mode and target
+    const session = await this.timerRepository.startSession(taskId, projectId, memberId, timerMode, sessionTargetSeconds);
     console.debug('[START_TIMER] session created:', session);
     
     // Save task (do NOT touch totals)

@@ -69,11 +69,11 @@ export const AssignMembersModal: React.FC<AssignMembersModalProps> = ({
       style={{ zIndex: 9999 }}
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxHeight: '80vh', overflow: 'auto' }}
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -88,7 +88,8 @@ export const AssignMembersModal: React.FC<AssignMembersModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6">
           <div className="mb-4">
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Task: {task.title}
@@ -117,20 +118,24 @@ export const AssignMembersModal: React.FC<AssignMembersModalProps> = ({
                     }`}
                     onClick={() => handleMemberToggle(member.id)}
                   >
-                    <div className="flex items-center justify-center w-5 h-5 rounded-full border-2 mr-3">
+                    <div className={`flex items-center justify-center w-5 h-5 rounded-full border-2 mr-3 transition-colors ${
+                      isSelected 
+                        ? 'border-blue-600 dark:border-blue-400 bg-blue-600 dark:bg-blue-400' 
+                        : 'border-gray-300 dark:border-gray-500'
+                    }`}>
                       {isSelected ? (
-                        <Check className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                        <Check className="w-3 h-3 text-white" />
                       ) : null}
                     </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 dark:text-white truncate">
                         {member.name}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
                         {member.email}
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
                       ${member.hourlyRate}/hr
                     </div>
                   </div>
@@ -147,7 +152,8 @@ export const AssignMembersModal: React.FC<AssignMembersModalProps> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700">
+        {/* Footer - Fixed */}
+        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           <button
             onClick={handleClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"

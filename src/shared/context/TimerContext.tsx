@@ -104,12 +104,11 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       // Initialize countdown if task has estimated time
       await countdownTimer.initializeCountdown(taskId);
       
-      // Start the new timer
+      // Start the new timer (mode will be determined by task properties)
       const memberId = user?.id || getCurrentUserId();
       const session = await container.startTaskTimer.execute({ 
         taskId, 
-        memberId,
-        mode: 'countup'
+        memberId
       });
       
       if (session) {

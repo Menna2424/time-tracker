@@ -16,12 +16,12 @@ interface TaskListProps {
   onStartTimer: (taskId: string) => void;
   onStopTimer?: (taskId: string) => void;
   activeTaskId: string | null;
-  assignedMembersMap?: Map<string, TeamMember[]>; // taskId -> TeamMember[]
   onAssignMembers?: (taskId: string, memberIds: string[]) => Promise<void>;
   showAssignmentButton?: boolean;
   onOpenAssignModal?: (task: Task) => void;
   onViewHistory?: (task: Task) => void;
   teamMembers?: TeamMember[];
+  getAssignedMembersForTask: (task: Task) => TeamMember[];
 }
 
 export const TaskList: React.FC<TaskListProps> = ({
@@ -34,12 +34,12 @@ export const TaskList: React.FC<TaskListProps> = ({
   onStartTimer,
   onStopTimer,
   activeTaskId,
-  assignedMembersMap = new Map(),
   onAssignMembers,
   showAssignmentButton = false,
   onOpenAssignModal,
   onViewHistory,
   teamMembers = [],
+  getAssignedMembersForTask,
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -52,9 +52,14 @@ export const TaskList: React.FC<TaskListProps> = ({
     setShowForm(false);
   };
 
-  const handleUpdateTask = async (taskData: Omit<Task, 'id'>) => {
+  const handleUpdateTask = async (taskData: Omit<Task, 'id'>, assignedMemberIds?: string[]) => {
     if (editingTask) {
-      await onUpdateTask(editingTask.id, taskData);
+      // Include assigned member IDs in the task data
+      const taskDataWithAssignments = {
+        ...taskData,
+        assignedMemberIds: assignedMemberIds || taskData.assignedMemberIds || []
+      };
+      await onUpdateTask(editingTask.id, taskDataWithAssignments);
       setEditingTask(null);
     }
   };
@@ -102,7 +107,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               onStopTimer={onStopTimer}
               isActive={task.id === activeTaskId}
               hourlyRate={hourlyRate}
-              assignedMembers={assignedMembersMap.get(task.id) || []}
+              assignedMembers={getAssignedMembersForTask(task)}
               onAssignMembers={onAssignMembers}
               showAssignmentButton={showAssignmentButton}
               onOpenAssignModal={onOpenAssignModal}

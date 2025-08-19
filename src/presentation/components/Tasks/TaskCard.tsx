@@ -4,6 +4,7 @@ import type { Task } from '../../../domain/entities/Task';
 import type { TeamMember } from '../../../domain/entities/TeamMember';
 import { useWorkdayTimerContext } from '../../../shared/context/WorkdayTimerContext';
 import { useUnifiedTimer } from '../../../application/useCases/useUnifiedTimer';
+import { useTimerContext } from '../../../shared/context/TimerContext';
 import { formatTime, formatMoney } from '../../../shared/utils/formatters';
 import { AssignedMembersDisplay } from './AssignedMembersDisplay';
 
@@ -46,7 +47,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     currentCents: 0
   });
 
-  // Note: countdown data is now calculated directly from task properties
+  // Get countdown data from timer context
+  const { getCountdownData } = useTimerContext();
+  const [countdownData, setCountdownData] = useState<{ remainingSeconds: number; progressPercentage: number; isExpired: boolean } | null>(null);
 
   const StatusIcon = task.status === 'completed' ? CheckCircle : Circle;
   const statusColor = task.status === 'completed' ? 'text-green-500' : 
@@ -58,7 +61,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     getLiveTaskData(task.id).then(data => {
       setLiveData(data);
     });
-  }, [nowTick, task.id, getLiveTaskData]);
+    
+    // Update countdown data if task has estimated time
+    if (task.estimatedMinutes && isActive) {
+      getCountdownData(task.id).then(data => {
+        setCountdownData(data);
+      });
+    } else {
+      setCountdownData(null);
+    }
+  }, [nowTick, task.id, getLiveTaskData, getCountdownData, task.estimatedMinutes, isActive]);
 
   // Helper function to format time as mm:ss
   const formatMMSS = (seconds: number): string => {
@@ -192,13 +204,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           ) : (
             <div className="flex items-center gap-3">
               <span className="font-medium">
-                Remaining: {formatMMSS(task.countdownRemainingSec || 0)}
+                Remaining: {countdownData ? formatMMSS(countdownData.remainingSeconds) : formatMMSS(task.countdownRemainingSec || 0)}
               </span>
               <div className="flex-1 h-2 rounded bg-slate-300 overflow-hidden">
                 <div
-                  className="h-2 bg-emerald-500"
+                  className={`h-2 ${countdownData?.isExpired ? 'bg-red-500' : 'bg-emerald-500'}`}
                   style={{ 
-                    width: `${Math.min(100, (1 - (task.countdownRemainingSec || 0) / (task.estimatedMinutes * 60)) * 100)}%` 
+                    width: `${countdownData ? countdownData.progressPercentage : Math.min(100, (1 - (task.countdownRemainingSec || 0) / (task.estimatedMinutes * 60)) * 100)}%` 
                   }}
                 />
               </div>

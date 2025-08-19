@@ -82,14 +82,15 @@ export class TickActiveWorkSecond {
           console.debug('[TICK] Estimated time countdown expired, auto-stopping task:', session.taskId);
           
           // Show notification before stopping
-          this.notificationService.showNotification(
-            `Estimated time reached for ${task.title}`,
-            {
-              body: 'Your task timer has been automatically stopped.',
-              tag: 'countdown-expired',
-              requireInteraction: false
-            }
-          );
+          this.notificationService.showCountdownExpiredNotification(task.title);
+          
+          // Update task status to completed before stopping
+          const taskWithCompletedStatus = {
+            ...task,
+            status: 'completed' as const,
+            countdownRemainingSec: 0
+          };
+          await this.tasksRepository.save(taskWithCompletedStatus);
           
           await this.stopTaskTimer.execute({ sessionId: session.id, taskId: session.taskId });
           continue;

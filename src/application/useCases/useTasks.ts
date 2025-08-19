@@ -48,6 +48,12 @@ export const useTasks = () => {
     }
   };
 
+  const updateOne = (id: string, patch: Partial<Task>) => {
+    setTasks(prev =>
+      prev.map(t => (t.id === id ? { ...t, ...patch } : t))
+    );
+  };
+
   const deleteTask = async (id: string) => {
     try {
       await taskRepository.delete(id);
@@ -102,6 +108,7 @@ export const useTasks = () => {
     loading,
     createTask,
     updateTask,
+    updateOne,
     deleteTask,
     loadTasks,
     refreshTasks: loadTasks, // Expose loadTasks as refreshTasks for external calls

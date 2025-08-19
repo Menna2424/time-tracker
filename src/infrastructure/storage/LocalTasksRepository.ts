@@ -18,6 +18,7 @@ const DEFAULT_TASKS = [
     currentCents: 0,
     hourlyRateCents: 2000, // $20/hour
     status: 'completed',
+    assignedMemberIds: [], // Initialize with empty array
     createdAt: new Date('2024-01-01').toISOString(),
     updatedAt: new Date('2024-01-01').toISOString(),
   },
@@ -32,6 +33,7 @@ const DEFAULT_TASKS = [
     currentCents: 0,
     hourlyRateCents: 2000, // $20/hour
     status: 'active',
+    assignedMemberIds: [], // Initialize with empty array
     createdAt: new Date('2024-01-02').toISOString(),
     updatedAt: new Date('2024-01-03').toISOString(),
   },
@@ -46,6 +48,7 @@ const DEFAULT_TASKS = [
     currentCents: 0,
     hourlyRateCents: 2000, // $20/hour
     status: 'pending',
+    assignedMemberIds: [], // Initialize with empty array
     createdAt: new Date('2024-01-05').toISOString(),
     updatedAt: new Date('2024-01-05').toISOString(),
   },

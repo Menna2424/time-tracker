@@ -12,9 +12,6 @@ import { useSettings } from '../../application/useCases/useSettings';
 // Removed unused task assignment imports - now using direct task storage
 import { MockTeamRepository } from '../../infrastructure/repositories/mockTeamRepository';
 import { GetTeamMembers } from '../../application/useCases/GetTeamMembers';
-import { CreateTaskWithAssignments } from '../../application/useCases/CreateTaskWithAssignments';
-import { LocalTasksRepository } from '../../infrastructure/storage/LocalTasksRepository';
-import { LocalTaskAssignmentRepository } from '../../infrastructure/repositories/LocalTaskAssignmentRepository';
 // Removed unused imports - using TimerContext instead
 import type { ProjectEnhanced } from '../../domain/types';
 import type { Task } from '../../domain/entities/Task';
@@ -34,7 +31,6 @@ export const Projects: React.FC = () => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyTask, setHistoryTask] = useState<Task | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [assignedMembersMap, setAssignedMembersMap] = useState<Map<string, TeamMember[]>>(new Map());
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   const { 
@@ -50,7 +46,9 @@ export const Projects: React.FC = () => {
   const { 
     tasks,
     loading: tasksLoading,
+    createTask,
     updateTask,
+    updateOne,
     deleteTask,
     loadTasks,
     assignMembers,
@@ -69,31 +67,14 @@ export const Projects: React.FC = () => {
   // Memoize repositories to prevent infinite re-renders
   const teamRepository = useMemo(() => new MockTeamRepository(), []);
   const getTeamMembersUseCase = useMemo(() => new GetTeamMembers(teamRepository), [teamRepository]);
-  const taskRepository = useMemo(() => new LocalTasksRepository(), []);
-  const taskAssignmentRepository = useMemo(() => new LocalTaskAssignmentRepository(), []);
-  const createTaskWithAssignments = useMemo(() => new CreateTaskWithAssignments(taskRepository, taskAssignmentRepository), [taskRepository, taskAssignmentRepository]);
 
-  // Memoize the loadAssignedMembers function to prevent unnecessary re-renders
-  const loadAssignedMembers = useCallback(async () => {
-    if (teamMembers.length === 0 || tasks.length === 0) return;
-    
-    const newAssignedMembersMap = new Map<string, TeamMember[]>();
-    
-    try {
-      // Load assignments from repository for accuracy
-      for (const task of tasks) {
-        const assignedMemberIds = await taskAssignmentRepository.getAssignedMembers(task.id);
-        const assignedMembers = teamMembers.filter(member => 
-          assignedMemberIds.includes(member.id)
-        );
-        newAssignedMembersMap.set(task.id, assignedMembers);
-      }
-      
-      setAssignedMembersMap(newAssignedMembersMap);
-    } catch (error) {
-      console.error('Error loading assigned members:', error);
+  // Helper function to get assigned members for a task
+  const getAssignedMembersForTask = useCallback((task: Task): TeamMember[] => {
+    if (!task.assignedMemberIds || task.assignedMemberIds.length === 0) {
+      return [];
     }
-  }, [tasks, teamMembers, taskAssignmentRepository]);
+    return teamMembers.filter(member => task.assignedMemberIds.includes(member.id));
+  }, [teamMembers]);
 
   // Load team members
   useEffect(() => {
@@ -108,11 +89,6 @@ export const Projects: React.FC = () => {
 
     loadTeamMembers();
   }, [getTeamMembersUseCase]);
-
-  // Load assigned members when team members or tasks change
-  useEffect(() => {
-    loadAssignedMembers();
-  }, [loadAssignedMembers]);
 
   // Detect active timer sessions on component mount and task changes
   useEffect(() => {
@@ -182,25 +158,28 @@ export const Projects: React.FC = () => {
 
 
   const handleCreateTask = async (taskData: Omit<Task, 'id'>, assignedMemberIds?: string[]) => {
-    // Always use CreateTaskWithAssignments for consistent behavior
-    await createTaskWithAssignments.execute({
-      title: taskData.title,
-      description: taskData.description,
-      status: taskData.status,
-      estimatedMinutes: taskData.estimatedMinutes,
-      assignedMemberIds: assignedMemberIds || [], // Default to empty array if no assignments
-      projectId: taskData.projectId
-    });
+    // Create task with assignments directly in the task data
+    const taskDataWithAssignments = {
+      ...taskData,
+      assignedMemberIds: assignedMemberIds || []
+    };
     
-    // Update tasks state manually since we're bypassing the useTasks hook
-    await loadTasks();
-    
-    // Refresh assigned members from repository to ensure UI is up to date
-    await loadAssignedMembers();
+    await createTask(taskDataWithAssignments);
   };
 
   const handleUpdateTask = async (id: string, taskData: Partial<Task>) => {
-    await updateTask(id, taskData);
+    try {
+      // Immediately update the UI for better responsiveness
+      updateOne(id, taskData);
+      
+      // Update the task in the repository
+      await updateTask(id, taskData);
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      // If the update failed, reload tasks to revert the optimistic update
+      await loadTasks();
+      throw error;
+    }
   };
 
   const handleDeleteTask = async (id: string) => {
@@ -262,17 +241,13 @@ export const Projects: React.FC = () => {
   const handleAssignMembers = useCallback(async (taskId: string, memberIds: string[]) => {
     try {
       await assignMembers(taskId, memberIds);
-      
-      // Update the local assigned members map for UI display
-      const assignedMembersForTask = teamMembers.filter(member => 
-        memberIds.includes(member.id)
-      );
-      setAssignedMembersMap(prev => new Map(prev).set(taskId, assignedMembersForTask));
+      // No need to update any local state since the task will be updated in the repository
+      // and the UI will reflect the changes through the task's assignedMemberIds
     } catch (error) {
       console.error('Error updating task assignments:', error);
       throw error; // Re-throw so the modal can handle the error
     }
-  }, [assignMembers, teamMembers]);
+  }, [assignMembers]);
 
   const handleOpenAssignModal = useCallback((task: Task) => {
     setSelectedTask(task);
@@ -340,12 +315,12 @@ export const Projects: React.FC = () => {
             onStartTimer={handleStartTaskTimer}
             onStopTimer={handleStopTaskTimer}
             activeTaskId={activeTaskId}
-            assignedMembersMap={assignedMembersMap}
             onAssignMembers={handleAssignMembers}
             showAssignmentButton={isAdmin}
             onOpenAssignModal={handleOpenAssignModal}
             onViewHistory={handleViewHistory}
             teamMembers={teamMembers}
+            getAssignedMembersForTask={getAssignedMembersForTask}
           />
 
           <AssignMembersModal
